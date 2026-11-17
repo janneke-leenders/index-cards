@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Index cards</title>
+<style>
+  :root { --bg: #efece6; --ink: #4a5566; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, sans-serif; }
+  header { padding: 28px 24px 8px; font-size: 13px; letter-spacing: .08em; opacity: .7; }
+  .wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 18px; padding: 16px 24px 48px; }
+  .card { aspect-ratio: 55 / 85; perspective: 900px; cursor: zoom-in; }
+  .inner { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.45, .05, .25, 1); }
+  .card:hover .inner { transform: rotateY(180deg); }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; background: #fff center / cover no-repeat;
+          box-shadow: 0 4px 14px rgba(0, 0, 0, .14); }
+  .back { transform: rotateY(180deg); }
+
+  /* zoomed view: one card large, click it to turn, click outside to close */
+  .zoom { position: fixed; inset: 0; background: rgba(239, 236, 230, .96); display: none; align-items: center; justify-content: center; perspective: 1800px; }
+  .zoom.open { display: flex; }
+  .big { width: min(58vh, 86vw); aspect-ratio: 55 / 85; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.45, .05, .25, 1); cursor: pointer; }
+  .big.flip { transform: rotateY(180deg); }
+  .big .face { box-shadow: 0 16px 40px rgba(0, 0, 0, .2); }
+  header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .btns button { font: inherit; letter-spacing: .08em; color: var(--ink); background: none; border: 1px solid var(--ink);
+                 padding: 6px 14px; margin-left: 8px; cursor: pointer; border-radius: 2px; }
+  .btns button.on { background: var(--ink); color: var(--bg); }
+  .tip { position: fixed; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 13px; opacity: .6; }
+  .nav { position: fixed; top: 50%; font-size: 28px; padding: 16px; cursor: pointer; opacity: .5; user-select: none; }
+  .nav:hover { opacity: 1; }
+  .prev { left: 8px; } .next { right: 8px; }
+</style>
+</head>
+<body>
+<header>INDEX CARDS · hover to turn · click to zoom
+  <span class="btns"><button id="shuffle">Shuffle</button><button id="time">Time order</button></span></header>
+<div class="wall" id="wall"></div>
+<div class="zoom" id="zoom">
+  <div class="nav prev" id="prev">←</div>
+  <div class="big" id="big"><div class="face" id="bf"></div><div class="face back" id="bb"></div></div>
+  <div class="nav next" id="next">→</div>
+  <div class="tip">click the card to turn it · ← → for the next card · Esc or click outside to close</div>
+</div>
+<script>
+  const N = 234, pad = n => String(n).padStart(3, "0");
+  const wall = document.getElementById("wall"), zoom = document.getElementById("zoom"), big = document.getElementById("big");
+  let cur = 0, order = [];
+
+  // order holds card numbers; the wall and the zoom both walk through it
+  function render(o) {
+    order = o; wall.innerHTML = "";
+    order.forEach((n, k) => {
+      const c = document.createElement("div"); c.className = "card";
+      c.innerHTML = `<div class="inner"><div class="face" style="background-image:url(img/${pad(n)}f.jpg)"></div>` +
+                    `<div class="face back" style="background-image:url(img/${pad(n)}b.jpg)"></div></div>`;
+      c.addEventListener("click", () => open(k));
+      wall.appendChild(c);
+    });
+  }
+  const timeOrder = () => Array.from({ length: N }, (_, k) => k + 1);
+  function shuffled() {
+    const a = timeOrder();
+    for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; }
+    return a;
+  }
+  const sb = document.getElementById("shuffle"), tb = document.getElementById("time");
+  sb.onclick = () => { render(shuffled()); sb.classList.add("on"); tb.classList.remove("on"); };
+  tb.onclick = () => { render(timeOrder()); tb.classList.add("on"); sb.classList.remove("on"); };
+  render(timeOrder()); tb.classList.add("on");
+  function open(k) {
+    cur = (k + N) % N; const n = order[cur];
+    big.classList.remove("flip");
+    document.getElementById("bf").style.backgroundImage = `url(img/${pad(n)}f.jpg)`;
+    document.getElementById("bb").style.backgroundImage = `url(img/${pad(n)}b.jpg)`;
+    zoom.classList.add("open");
+  }
+  const close = () => zoom.classList.remove("open");
+  big.addEventListener("click", e => { e.stopPropagation(); big.classList.toggle("flip"); });
+  document.getElementById("prev").addEventListener("click", e => { e.stopPropagation(); open(cur - 1); });
+  document.getElementById("next").addEventListener("click", e => { e.stopPropagation(); open(cur + 1); });
+  zoom.addEventListener("click", close);
+  document.addEventListener("keydown", e => {
+    if (!zoom.classList.contains("open")) return;
+    if (e.key === "Escape") close();
+    if (e.key === "ArrowRight") open(cur + 1);
+    if (e.key === "ArrowLeft") open(cur - 1);
+    if (e.key === " ") { e.preventDefault(); big.classList.toggle("flip"); }
+  });
+</script>
+</body>
+</html>
