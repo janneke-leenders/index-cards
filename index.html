@@ -17,10 +17,14 @@
   .back { transform: rotateY(180deg); }
 
   /* zoomed view: one card large, click it to turn, click outside to close */
-  .zoom { position: fixed; inset: 0; background: rgba(239, 236, 230, .96); display: none; align-items: center; justify-content: center; perspective: 1800px; }
+  /* behind the zoomed card the wall goes soft and grainy, like a pencil smudge */
+  .zoom::before { content: ""; position: absolute; inset: -20px; pointer-events: none; opacity: .55; mix-blend-mode: multiply;
+                  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .29  0 0 0 0 .33  0 0 0 0 .40  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+  .zoom { position: fixed; inset: 0; background: rgba(239, 236, 230, .55); backdrop-filter: blur(14px) saturate(.6); -webkit-backdrop-filter: blur(14px) saturate(.6); display: none; align-items: center; justify-content: center; perspective: 1800px; }
   .zoom.open { display: flex; }
   .big { width: min(58vh, 86vw); aspect-ratio: 55 / 85; position: relative; transform-style: preserve-3d; transition: transform .8s cubic-bezier(.45, .05, .25, 1); cursor: pointer; }
   .big.flip { transform: rotateY(180deg); }
+  .big { z-index: 1; } .nav, .tip { z-index: 1; }
   .big .face { box-shadow: 0 16px 40px rgba(0, 0, 0, .2); }
   header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
   .btns button { font: inherit; letter-spacing: .08em; color: var(--ink); background: none; border: 1px solid var(--ink);
@@ -58,7 +62,10 @@
       wall.appendChild(c);
     });
   }
-  const timeOrder = () => Array.from({ length: N }, (_, k) => k + 1);
+  
+  // cards left out of the web version
+  const SKIP = [72];
+  const timeOrder = () => Array.from({ length: N }, (_, k) => k + 1).filter(n => !SKIP.includes(n));
   function shuffled() {
     const a = timeOrder();
     for (let k = a.length - 1; k > 0; k--) { const j = Math.floor(Math.random() * (k + 1)); [a[k], a[j]] = [a[j], a[k]]; }
@@ -69,7 +76,7 @@
   tb.onclick = () => { render(timeOrder()); tb.classList.add("on"); sb.classList.remove("on"); };
   render(timeOrder()); tb.classList.add("on");
   function open(k) {
-    cur = (k + N) % N; const n = order[cur];
+    cur = (k + order.length) % order.length; const n = order[cur];
     big.classList.remove("flip");
     document.getElementById("bf").style.backgroundImage = `url(img/${pad(n)}f.jpg)`;
     document.getElementById("bb").style.backgroundImage = `url(img/${pad(n)}b.jpg)`;
